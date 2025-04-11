@@ -1,0 +1,42 @@
+version: 0.2
+
+env:
+  variables:
+    ASPNETCORE_ENVIRONMENT: "Development"
+  parameter-store:
+    AmaxDB_DbConnectionString: "/amaxapi/dev/AppSettings/Database/AmaxDB/DbConnectionString"
+    IPAdminDB_DbConnectionString: "/amaxapi/dev/AppSettings/Database/IPAdminDB/DbConnectionString"
+    S3_AccessKey: "/amaxapi/dev/AppSettings/S3Config/AccessKey"
+    S3_SecretKey: "/amaxapi/dev/AppSettings/S3Config/SecretKey"
+    S3_Region: "/amaxapi/dev/AppSettings/S3Config/Region"
+
+phases:
+  install:
+    runtime-versions:
+      dotnet: 6.0
+    commands:
+      - yum install python3-pip -y
+      - pip install awsebcli --upgrade --user
+      - export PATH=$PATH:$HOME/.local/bin
+      - eb --version
+
+  pre_build:
+    commands:
+      - dotnet restore Amax.InsurancePro.API/Amax.InsurancePro.API.csproj
+
+  build:
+    commands:
+      - dotnet build Amax.InsurancePro.API/Amax.InsurancePro.API.csproj
+
+  post_build:
+    commands:
+      - dotnet publish -c Release -o ./app Amax.InsurancePro.API/Amax.InsurancePro.API.csproj
+      - cd ./app
+      - ls -la
+      - eb init amax-insurance-pro-api-dev --region us-east-2
+      - eb deploy
+      - eb logs
+
+artifacts:
+  files:
+    - '**/*'
