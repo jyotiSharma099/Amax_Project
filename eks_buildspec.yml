@@ -1,0 +1,22 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+        - apt update -y
+        - apt install awscli -y
+        - apt install docker docker.io -y
+        - aws s3 cp s3://ambayo-env-file/env .env
+        - aws s3 cp s3://ambayo-env-file/pipeline.pem .
+        - ls -la
+        - aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin 009160051674.dkr.ecr.us-west-1.amazonaws.com
+        - docker build -t ambayo-image .
+        - TIMESTAMP=$(date +'%Y%m%d-%H%M%S')
+        - docker tag ambayo-image:latest 009160051674.dkr.ecr.us-west-1.amazonaws.com/ambayo-image:latest-$TIMESTAMP
+        - docker push 009160051674.dkr.ecr.us-west-1.amazonaws.com/ambayo-image:latest-$TIMESTAMP
+        - chmod 600 pipeline.pem
+        - IMAGE_TAG=latest-$TIMESTAMP
+        - aws eks update-kubeconfig --name ambayo-cluster --region us-west-1
+        - ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i pipeline.pem ubuntu@54.176.157.167 "
+          cd /home/ubuntu/deployment &&
+          sed -i 's|009160051674.dkr.ecr.us-west-1.amazonaws.com/ambayo-image:latest.*|009160051674.dkr.ecr.us-west-1.amazonaws.com/ambayo-image:$IMAGE_TAG|g' deployment.yaml && kubectl apply -f deployment.yaml"
