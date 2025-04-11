@@ -1,0 +1,32 @@
+version: 0.2
+ 
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - apt install python3-pip -y
+      - pip install awsebcli --upgrade --user
+      - export PATH=$PATH:$HOME/.local/bin
+      - eb --version
+      - echo Installing dependencies...
+      - rm -rf node_modules package-lock.json
+      - npm cache clean --force
+      - npm install --legacy-peer-deps
+      - npm install --force
+      - npm list vite  # Check if vite is installed
+      - npm install -g vite
+      #- npm install vite@latest --save-dev
+  build:
+    commands:
+      - npm run build
+ 
+  post_build:
+    commands:
+      - eb init Connectfrontend-eb --region us-east-1
+      - eb deploy
+      - eb logs
+ 
+artifacts:
+  files:
+    - '**/*'
